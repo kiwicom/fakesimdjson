@@ -1,4 +1,4 @@
-module fakesimdjson
+module github.com/kiwicom/fakesimdjson
 
 go 1.17
 
