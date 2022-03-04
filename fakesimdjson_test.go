@@ -97,6 +97,10 @@ func TestParse(t *testing.T) {
 			name: "nested",
 			json: `{"a": [{"msg": "hello"}, {"msg": "world"}]}`,
 		},
+		{
+			name: "string escaped",
+			json: `{"a": "há\u010dek"}`,
+		},
 	}
 	for _, test := range tests {
 		test := test
