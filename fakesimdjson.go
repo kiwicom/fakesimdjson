@@ -32,10 +32,15 @@ func Parse(b []byte) (*simdjson.ParsedJson, error) {
 	case err != nil:
 		return nil, err
 	}
-	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
-		return nil, fmt.Errorf("expecting object, got %T %v", tok, tok)
+	delim, ok := tok.(json.Delim)
+	if !ok || (delim != '{' && delim != '[') {
+		return nil, fmt.Errorf("expecting object or array, got %T %v", tok, tok)
 	}
-	err = p.parseObject()
+	if delim == '{' {
+		err = p.parseObject()
+	} else {
+		err = p.parseArray()
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -115,6 +115,11 @@ func TestParse(t *testing.T) {
 			json:         `{"a": "há\u010dek"}`,
 			expectedJSON: `{"a":"háček"}`,
 		},
+		{
+			name:         "array in root",
+			json:         `[]`,
+			expectedJSON: `[]`,
+		},
 	}
 	for _, test := range tests {
 		test := test
