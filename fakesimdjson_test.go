@@ -10,53 +10,65 @@ import (
 
 func TestParse(t *testing.T) {
 	tests := []struct {
-		name string
-		json string
-		err  string
+		name         string
+		json         string
+		expectedJSON string
+		err          string
 	}{
 		{
-			name: "empty object",
-			json: `{}`,
+			name:         "empty object",
+			json:         `{}`,
+			expectedJSON: `{}`,
 		},
 		{
-			name: "single null",
-			json: `{"value": null}`,
+			name:         "single null",
+			json:         `{"value": null}`,
+			expectedJSON: `{"value":null}`,
 		},
 		{
-			name: "single true",
-			json: `{"value": true}`,
+			name:         "single true",
+			json:         `{"value": true}`,
+			expectedJSON: `{"value":true}`,
 		},
 		{
-			name: "single false",
-			json: `{"value": false}`,
+			name:         "single false",
+			json:         `{"value": false}`,
+			expectedJSON: `{"value":false}`,
 		},
 		{
-			name: "single int",
-			json: `{"value": -5}`,
+			name:         "single int",
+			json:         `{"value": -5}`,
+			expectedJSON: `{"value":-5}`,
 		},
 		{
-			name: "single zero",
-			json: `{"value": 0}`,
+			name:         "single zero",
+			json:         `{"value": 0}`,
+			expectedJSON: `{"value":0}`,
 		},
 		{
-			name: "single float",
-			json: `{"value": 1.3}`,
+			name:         "single float",
+			json:         `{"value": 1.3}`,
+			expectedJSON: `{"value":1.3}`,
 		},
 		{
-			name: "single uint",
-			json: `{"value": 18446744073709551615}`, // max uint64
+			name:         "single uint",
+			json:         `{"value": 18446744073709551615}`, // max uint64
+			expectedJSON: `{"value":18446744073709551615}`,  // max uint64
 		},
 		{
-			name: "single string",
-			json: `{"value": "hello world"}`,
+			name:         "single string",
+			json:         `{"value": "hello world"}`,
+			expectedJSON: `{"value":"hello world"}`,
 		},
 		{
-			name: "single empty object",
-			json: `{"value": {}}`,
+			name:         "single empty object",
+			json:         `{"value": {}}`,
+			expectedJSON: `{"value":{}}`,
 		},
 		{
-			name: "single empty array",
-			json: `{"value": []}`,
+			name:         "single empty array",
+			json:         `{"value": []}`,
+			expectedJSON: `{"value":[]}`,
 		},
 		{
 			name: "malformed object",
@@ -94,17 +106,35 @@ func TestParse(t *testing.T) {
 			err:  "unexpected EOF",
 		},
 		{
-			name: "nested",
-			json: `{"a": [{"msg": "hello"}, {"msg": "world"}]}`,
+			name:         "nested",
+			json:         `{"a": [{"msg": "hello"}, {"msg": "world"}]}`,
+			expectedJSON: `{"a":[{"msg":"hello"},{"msg":"world"}]}`,
 		},
 		{
-			name: "string escaped",
-			json: `{"a": "há\u010dek"}`,
+			name:         "string escaped",
+			json:         `{"a": "há\u010dek"}`,
+			expectedJSON: `{"a":"háček"}`,
 		},
 	}
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
+			ourPJ, err := Parse([]byte(test.json))
+			if test.err != "" {
+				require.EqualError(t, err, test.err)
+				return
+			}
+			require.NoError(t, err, "parse our tape")
+			require.NotNil(t, ourPJ)
+
+			ourJSON, err := tape2json(ourPJ)
+			require.NoError(t, err)
+			assert.Equal(t, test.expectedJSON, string(ourJSON))
+		})
+		t.Run(test.name+" same as real simdjson", func(t *testing.T) {
+			if !simdjson.SupportedCPU() {
+				t.Skip("this CPU is not supported by simdjson")
+			}
 			ourPJ, err := Parse([]byte(test.json))
 			if test.err != "" {
 				require.EqualError(t, err, test.err)
