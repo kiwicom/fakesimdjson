@@ -1,19 +1,22 @@
-package fakesimdjson
+package fakesimdjson_test
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/kiwicom/fakesimdjson"
 	"github.com/minio/simdjson-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestParse(t *testing.T) {
-	tests := []struct {
+var (
+	tests = []struct {
 		name         string
 		json         string
 		expectedJSON string
 		err          string
+		ndErr        string
 	}{
 		{
 			name:         "empty object",
@@ -86,9 +89,10 @@ func TestParse(t *testing.T) {
 			err:  "unexpected EOF",
 		},
 		{
-			name: "malformed object 4",
-			json: `{`,
-			err:  "unexpected EOF",
+			name:  "malformed object 4",
+			json:  `{`,
+			err:   "unexpected EOF",
+			ndErr: "invalid character '{'",
 		},
 		{
 			name: "malformed object 5",
@@ -121,10 +125,16 @@ func TestParse(t *testing.T) {
 			expectedJSON: `[]`,
 		},
 	}
+)
+
+func TestParse(t *testing.T) {
+
+	t.Parallel()
+
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			ourPJ, err := Parse([]byte(test.json))
+			ourPJ, err := fakesimdjson.Parse([]byte(test.json))
 			if test.err != "" {
 				require.EqualError(t, err, test.err)
 				return
@@ -140,7 +150,7 @@ func TestParse(t *testing.T) {
 			if !simdjson.SupportedCPU() {
 				t.Skip("this CPU is not supported by simdjson")
 			}
-			ourPJ, err := Parse([]byte(test.json))
+			ourPJ, err := fakesimdjson.Parse([]byte(test.json))
 			if test.err != "" {
 				require.EqualError(t, err, test.err)
 				return
@@ -149,6 +159,66 @@ func TestParse(t *testing.T) {
 			require.NotNil(t, ourPJ)
 
 			origPJ, err := simdjson.Parse([]byte(test.json), nil)
+			require.NoError(t, err)
+			require.NotNil(t, origPJ)
+
+			origJSON, err := tape2json(origPJ)
+			require.NoError(t, err)
+
+			ourJSON, err := tape2json(ourPJ)
+			require.NoError(t, err)
+
+			assert.Equal(t, string(origJSON), string(ourJSON))
+		})
+	}
+}
+
+func TestParseND(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range tests {
+		test := test
+
+		var (
+			testErr string
+
+			testJson         = fmt.Sprintf("%s\n%[1]s\n%[1]s", test.json)
+			testExpectedJSON = fmt.Sprintf("%s\n%[1]s\n%[1]s", test.expectedJSON)
+		)
+
+		if test.ndErr != "" {
+			testErr = test.ndErr
+		} else {
+			testErr = test.err
+		}
+
+		t.Run(test.name, func(t *testing.T) {
+			ourPJ, err := fakesimdjson.ParseND([]byte(testJson))
+
+			if testErr != "" {
+				require.EqualError(t, err, testErr)
+				return
+			}
+			require.NoError(t, err, "parse our tape")
+			require.NotNil(t, ourPJ)
+
+			ourJSON, err := tape2json(ourPJ)
+			require.NoError(t, err)
+			assert.Equal(t, testExpectedJSON, string(ourJSON))
+		})
+		t.Run(fmt.Sprintf("%s same as real simdjson", test.name), func(t *testing.T) {
+			if !simdjson.SupportedCPU() {
+				t.Skip("this CPU is not supported by simdjson")
+			}
+			ourPJ, err := fakesimdjson.ParseND([]byte(testJson))
+			if testErr != "" {
+				require.EqualError(t, err, testErr)
+				return
+			}
+			require.NoError(t, err, "parse our tape")
+			require.NotNil(t, ourPJ)
+
+			origPJ, err := simdjson.ParseND([]byte(testJson), nil)
 			require.NoError(t, err)
 			require.NotNil(t, origPJ)
 
