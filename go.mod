@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/minio/simdjson-go v0.4.2
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
